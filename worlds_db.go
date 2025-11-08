@@ -83,3 +83,20 @@ func RegisterWantGoWorld(worldID, userID string) error {
 	_, err = db.Exec(`INSERT INTO test.want_go (user_id, world_id) VALUES (?, ?)`, userID, worldID)
 	return err
 }
+
+// UnregisterWantGoWorld 行きたいワールドを登録解除
+// 行きたいワールドとして登録していない、もしくは不正なワールドIDを指定した場合 NotRegisteredError を返す
+func UnregisterWantGoWorld(worldID string, userID string) error {
+	// 登録解除対象のワールドを行きたいワールドに登録しているかチェック
+	var c int
+	err := db.Get(&c, "SELECT count(*) FROM test.want_go WHERE user_id = ? AND world_id = ?", userID, worldID)
+	if err != nil {
+		return err
+	}
+	if c == 0 {
+		return NotRegisteredError
+	}
+
+	_, err = db.Exec("DELETE FROM test.want_go WHERE user_id = ? AND world_id = ?", userID, worldID)
+	return err
+}

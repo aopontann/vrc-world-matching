@@ -62,3 +62,25 @@ func PostWorld(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("OK"))
 }
+
+// DeleteWorld 行きたいワールドの登録解除
+func DeleteWorld(w http.ResponseWriter, r *http.Request) {
+	v := (r.Context()).Value("user_id")
+	userID, _ := v.(string)
+	worldID := r.PathValue("world_id")
+
+	err := UnregisterWantGoWorld(worldID, userID)
+	if err != nil {
+		if errors.Is(err, NotRegisteredError) {
+			slog.Warn(err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		slog.Error(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+}
