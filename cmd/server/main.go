@@ -30,7 +30,9 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /worlds", m.AuthMiddleware(m.GetWorldList))
+	mux.HandleFunc("GET /worlds/{world_id}", m.AuthMiddleware(m.GetWorld))
 	mux.HandleFunc("POST /worlds/{world_id}", m.AuthMiddleware(m.PostWorld))
+	mux.HandleFunc("DELETE /worlds/{world_id}", m.AuthMiddleware(m.DeleteWorld))
 
 	err := http.ListenAndServe(":8080", mux)
 	if err != nil {

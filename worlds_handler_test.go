@@ -27,6 +27,70 @@ func TestGetWorldList(t *testing.T) {
 	t.Log(string(body))
 }
 
+func TestGetWorld(t *testing.T) {
+	tests := []struct {
+		Name          string
+		WorldID       string
+		WantCode      int
+		PrepareTables Tables
+	}{
+		{
+			Name:     "登録済みのワールドIDを指定",
+			WorldID:  "world1",
+			WantCode: http.StatusOK,
+			PrepareTables: Tables{
+				World: []World{
+					{ID: "world1", Name: "name", Thumbnail: "sanume1", CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()},
+				},
+			},
+		},
+		{
+			Name:     "登録していないワールドIDを指定",
+			WorldID:  "world2",
+			WantCode: http.StatusNotFound,
+			PrepareTables: Tables{
+				World: []World{
+					{ID: "world1", Name: "name", Thumbnail: "thumbnail1", CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()},
+				},
+			},
+		},
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /worlds/{world_id}", AuthMiddleware(GetWorld))
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			if err := CleanUp(); err != nil {
+				t.Error(err)
+			}
+			if err := SetUp(test.PrepareTables); err != nil {
+				t.Error(err)
+			}
+
+			r := httptest.NewRequest(http.MethodGet, "/worlds/"+test.WorldID, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, r)
+
+			resp := w.Result()
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Error(err)
+			}
+
+			if resp.StatusCode != test.WantCode {
+				t.Fatalf("got %d; want %d", resp.StatusCode, http.StatusOK)
+			}
+
+			t.Log(string(body))
+		})
+	}
+
+	if err := CleanUp(); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestPostWorld(t *testing.T) {
 	tests := []struct {
 		Name          string

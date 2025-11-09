@@ -25,6 +25,27 @@ func GetWorldList(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetWorld 行きたいワールド一覧取得
+func GetWorld(w http.ResponseWriter, r *http.Request) {
+	worldID := r.PathValue("world_id")
+
+	worlds, err := GetWorldInfo(worldID)
+	if err != nil {
+		if errors.Is(err, NotFoundError) {
+			slog.Warn(err.Error())
+			http.Error(w, NotFoundError.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = json.NewEncoder(w).Encode(worlds)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 // PostWorld 行きたいワールド登録
 func PostWorld(w http.ResponseWriter, r *http.Request) {
 	v := (r.Context()).Value("user_id")
