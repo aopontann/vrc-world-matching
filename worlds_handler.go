@@ -105,3 +105,51 @@ func DeleteWorld(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
+
+func GetRecruitListInWorld(w http.ResponseWriter, r *http.Request) {
+	worldID := r.PathValue("world_id")
+
+	orderColumn := r.URL.Query().Get("order")
+	if orderColumn == "" {
+		orderColumn = "created_at"
+	}
+	if orderColumn != "created_at" && orderColumn != "joining_count" {
+		msg := "sort に不正な値が指定されています"
+		slog.Warn(msg, slog.String("value", orderColumn))
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+
+	var isAsc bool
+	switch r.URL.Query().Get("asc") {
+	case "true":
+		isAsc = true
+	case "false":
+		isAsc = false
+	case "":
+		isAsc = true
+	default:
+		msg := "type に不正な値が指定されています"
+		slog.Warn(msg, slog.String("value", r.URL.Query().Get("asc")))
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+
+	recruits, err := ListRecruitInWorld(worldID, orderColumn, isAsc)
+	if err != nil {
+		if errors.Is(err, NotFoundError) {
+			slog.Warn(err.Error())
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		slog.Error(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(recruits)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}

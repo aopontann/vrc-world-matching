@@ -1,11 +1,27 @@
 package vrc_world_matching
 
+import "time"
+
 type WorldWithWantGo struct {
-	Id           string `db:"id"`
+	ID           string `db:"id"`
 	Name         string `db:"name"`
 	Thumbnail    string `db:"thumbnail"`
 	WantGoCount  int    `db:"want_go_count"`
 	RecruitCount int    `db:"recruit_count"`
+}
+
+type RecruitDetail struct {
+	ID             string    `db:"id"`
+	Content        string    `db:"content"`
+	UserID         string    `db:"user_id"`
+	Username       string    `db:"user_name"`
+	UserIcon       string    `db:"user_icon"`
+	WorldID        string    `db:"world_id"`
+	WorldName      string    `db:"world_name"`
+	WorldThumbnail string    `db:"world_thumbnail"`
+	JoiningCount   int       `db:"joining_count"`
+	MessagesCount  int       `db:"messages_count"`
+	CreatedAt      time.Time `db:"created_at"`
 }
 
 // ListWorld 行きたいワールドリストを取得
@@ -149,4 +165,41 @@ func UnregisterWantGoWorld(worldID string, userID string) error {
 
 	_, err = db.Exec("DELETE FROM test.want_go WHERE user_id = ? AND world_id = ?", userID, worldID)
 	return err
+}
+
+// ListRecruitInWorld ワールドの募集リストを取得
+// 引数：orderColumn には "created_at" or "joining_count" を指定
+// 上記以外の文字を指定した場合 InvalidArgumentError を返す
+// 引数：asc 昇順にする場合は TRUE を指定
+func ListRecruitInWorld(worldID, orderColumn string, asc bool) ([]RecruitDetail, error) {
+	// テーブルに存在しないワールドIDを指定した場合は NotFoundError を返す
+	// 指定されたワールドIDがテーブルには存在するが、募集が一つもない場合は空のスライスを返す
+	var c int
+	err := db.Get(&c, "SELECT count(*) FROM test.worlds WHERE id = ?", worldID)
+	if err != nil {
+		return nil, err
+	}
+	if c == 0 {
+		return nil, NotFoundError
+	}
+
+	var q string
+	if orderColumn == "created_at" {
+		if asc {
+			q = `SELECT * FROM view_recruits_in_world WHERE world_id = ? ORDER BY created_at`
+		} else {
+			q = `SELECT * FROM view_recruits_in_world WHERE world_id = ? ORDER BY created_at DESC`
+		}
+	} else if orderColumn == "joining_count" {
+		if asc {
+			q = `SELECT * FROM view_recruits_in_world WHERE world_id = ? ORDER BY joining_count`
+		} else {
+			q = `SELECT * FROM view_recruits_in_world WHERE world_id = ? ORDER BY joining_count DESC`
+		}
+	} else {
+		return nil, InvalidArgumentError
+	}
+	var rd []RecruitDetail
+	err = db.Select(&rd, q, worldID)
+	return rd, err
 }
